@@ -11,6 +11,7 @@ import logo from "../assets/logo_white.webp";
 import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import { useChat } from "../context/UseChat";
+import ProductCarousel from "../components/product/ProductCarousel";
 
 const SCROLL_THRESHOLD = 80;
 const MODAL_Z_INDEX = 50;
@@ -276,6 +277,7 @@ const Chat = () => {
               onContentChange={handleContentChange}
             />
           )}
+          {chat.products && <ProductCarousel products={chat.products || []}/>}
         </div>
       </div>
     ));
@@ -335,6 +337,7 @@ const Chat = () => {
           >
             {chatMessages}
             <div ref={endRef} aria-hidden="true" />
+            
           </div>
 
           <ChatInput

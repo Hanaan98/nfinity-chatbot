@@ -10,7 +10,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       "/api": {
-        target: "https://75e7df112da2.ngrok-free.app",
+        target: "https://nfinity-ai.onrender.com",
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ""),

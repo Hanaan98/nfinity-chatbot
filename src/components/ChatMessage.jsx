@@ -1,3 +1,4 @@
+// src/components/ChatMessage.jsx
 import React, {
   useMemo,
   useRef,
@@ -6,7 +7,6 @@ import React, {
   useCallback,
 } from "react";
 import ChatbotIcon from "./ChatbotIcon";
-import ProductCarousel from "./product/ProductCarousel";
 
 const formatTime = (date) => {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -65,15 +65,12 @@ const ChatMessage = React.memo(function ChatMessage({
   const messageTime = useMemo(() => chat.time || new Date(), [chat.time]);
   const content = chat.text ?? "";
 
-  // detect carousel
-  const isCarousel =
-    chat.type === "carousel" || (chat.products?.length ?? 0) > 0;
-
-  // typing only if no content and not a carousel
-  const showDots = isModel && (isTyping || (!content && !isCarousel));
+  // typing indicator should show when assistant is typing OR there's no content yet
+  const showDots = isModel && (isTyping || !content);
 
   const formattedContent = useMemo(() => formatMessage(content), [content]);
 
+  // Fire onContentChange once dots stop (to help parent adjust scroll)
   const prevShowDotsRef = useRef(showDots);
   useLayoutEffect(() => {
     if (prevShowDotsRef.current && !showDots) {
@@ -104,16 +101,38 @@ const ChatMessage = React.memo(function ChatMessage({
       data-mid={chat.id}
       className={`message ${isModel ? "bot" : "user"}-message ${
         chat.isError ? "error" : ""
-      } ${chat.products ? "!block" : ""}`}
+      }`}
       role="listitem"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {isModel && <ChatbotIcon />}
 
-      {/* ===== CAROUSEL MESSAGE (no bubble) WITH OPTIONAL CAPTION ===== */}
-      {isCarousel ? (
-        <div className="w-full max-w-full">
+      {/* Standard bubble (no carousel logic here) */}
+      <div className="message-wrap">
+        {chat.image?.url && (
+          <div className="message-image mb-2">
+            {!imageError ? (
+              <img
+                src={chat.image.url}
+                alt={chat.image.name || "Message attachment"}
+                className="max-w-full max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                loading="lazy"
+              />
+            ) : (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
+                Failed to load image
+              </div>
+            )}
+            {chat.image?.name && !imageError && (
+              <p className="text-xs text-gray-600 mt-1">{chat.image.name}</p>
+            )}
+          </div>
+        )}
+
+        <div className="message-text" onClick={handleClick}>
           {showDots ? (
             <div className="typing-dots py-2" aria-label="Assistant is typing">
               <div className="dot" />
@@ -121,98 +140,43 @@ const ChatMessage = React.memo(function ChatMessage({
               <div className="dot" />
             </div>
           ) : (
-            <>
-              {/* caption line above the carousel if chat.text exists */}
-              {content ? (
-                <div
-                  className="mb-2 mt-2 px-1 sm:px-2 text-sm text-gray-800 dark:text-gray-200"
-                  dangerouslySetInnerHTML={{ __html: formattedContent }}
-                />
-              ) : null}
-
-              <div className="w-full px-1 sm:px-2 mt-2">
-                <ProductCarousel products={chat.products || []} />
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        /* ===== ORIGINAL BUBBLE for all other messages ===== */
-        <div className="message-wrap">
-          {chat.image?.url && (
-            <div className="message-image mb-2">
-              {!imageError ? (
-                <img
-                  src={chat.image.url}
-                  alt={chat.image.name || "Message attachment"}
-                  className="max-w-full max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  loading="lazy"
-                />
-              ) : (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
-                  Failed to load image
+            <div className="flex flex-col gap-2">
+              {isError && (
+                <div className="flex items-center gap-2 mb-2 text-red-600">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                  </svg>
+                  <span className="text-sm font-medium">Message failed to send</span>
                 </div>
               )}
-              {chat.image?.name && !imageError && (
-                <p className="text-xs text-gray-600 mt-1">{chat.image.name}</p>
+
+              {content ? (
+                <div
+                  className="message-content"
+                  dangerouslySetInnerHTML={{ __html: formattedContent }}
+                />
+              ) : (
+                !showDots && (
+                  <p className="text-gray-500 italic">
+                    {isError ? "Failed to send message" : "No content"}
+                  </p>
+                )
+              )}
+
+              {isError && onRetry && (
+                <RetryButton onRetry={handleRetry} disabled={isModel && isTyping} />
               )}
             </div>
           )}
-
-          <div className="message-text" onClick={handleClick}>
-            {showDots ? (
-              <div
-                className="typing-dots py-2"
-                aria-label="Assistant is typing"
-              >
-                <div className="dot" />
-                <div className="dot" />
-                <div className="dot" />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {isError && (
-                  <div className="flex items-center gap-2 mb-2 text-red-600">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                    </svg>
-                    <span className="text-sm font-medium">
-                      Message failed to send
-                    </span>
-                  </div>
-                )}
-
-                {content ? (
-                  <div
-                    className="message-content"
-                    dangerouslySetInnerHTML={{ __html: formattedContent }}
-                  />
-                ) : (
-                  !showDots && (
-                    <p className="text-gray-500 italic">
-                      {isError ? "Failed to send message" : "No content"}
-                    </p>
-                  )
-                )}
-
-                {isError && onRetry && (
-                  <RetryButton
-                    onRetry={handleRetry}
-                    disabled={isModel && isTyping}
-                  />
-                )}
-              </div>
-            )}
-          </div>
         </div>
-      )}
+
+        {/* Optional time UI (kept for parity; keep commented if not used) */}
+        {/* {showTime && (
+          <div className="message-time">
+            <span>{formatTime(messageTime)}</span>
+          </div>
+        )} */}
+      </div>
     </div>
   );
 });

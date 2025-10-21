@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import logo from "../assets/logo_white.webp";
 import HelpMenu from "../components/HelpMenu";
-
 import Chatbot from "../Chatbot";
 import { useChat } from "../context/UseChat";
 
 const Home = () => {
   const { showChatbot, setShowChatbot } = useChat();
+
 
   const defaultItems = useMemo(
     () => [
@@ -14,16 +14,7 @@ const Home = () => {
         id: "gpt_chat",
         label: "Chat with Nfinity GPT",
         highlight: true,
-        ChatHistory: [
-          {
-            role: "model",
-            text: "Hello! I'm Nfinity GPT. How can I assist you today?",
-            id: "gpt_chat",
-            time: new Date().toLocaleTimeString(),
-            isProductRecommendation: true,
-          },
-        ],
-        // badge: <img src={image} width="30px" height="30px" />,
+        ChatHistory: [], // ← empty: no default model greeting
       },
       {
         id: "recommend",
@@ -37,8 +28,6 @@ const Home = () => {
             isProductRecommendation: false,
           },
         ],
-        greetingMessage:
-          "Great—tell me your budget, preferences, and the occasion, and I'll curate options for you.",
       },
       {
         id: "sizing",
@@ -52,8 +41,6 @@ const Home = () => {
             isProductRecommendation: false,
           },
         ],
-        greetingMessage:
-          "Share the product name and your measurements; I'll recommend the best size and fit.",
       },
       {
         id: "returns",
@@ -67,8 +54,6 @@ const Home = () => {
             isProductRecommendation: false,
           },
         ],
-        greetingMessage:
-          "Please provide your order number and the item in question, and I'll guide you through the process.",
       },
       {
         id: "feedback",
@@ -82,8 +67,6 @@ const Home = () => {
             isProductRecommendation: false,
           },
         ],
-        greetingMessage:
-          "Tell me what isn't working or what could be improved; I'll share it with our team right away.",
       },
     ],
     []
@@ -103,7 +86,6 @@ const Home = () => {
             isProductRecommendation: false,
           },
         ],
-        greetingMessage: "What kind of products are you looking for?",
         badge: (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -137,18 +119,13 @@ const Home = () => {
     []
   );
 
-  const handleMinimize = () => {
-    setShowChatbot(false);
-  };
+  const handleMinimize = () => setShowChatbot(false);
 
   return (
     <Chatbot showChatbot={showChatbot} setShowChatbot={setShowChatbot}>
       <div className="chatbot-popup">
         <div className="chat-header">
-          <div
-            className="header-info ml-3 lg:ml-0
-          "
-          >
+          <div className="header-info ml-3 lg:ml-0">
             <img src={logo} width="140" height="24" alt="Nfinity Logo" />
           </div>
           <button
@@ -166,6 +143,7 @@ const Home = () => {
             <h2>How can we help?</h2>
             <p>Ask anything, or start with a popular topic.</p>
           </div>
+
           <HelpMenu items={defaultItems} />
           <HelpMenu items={trackItems} />
         </div>
