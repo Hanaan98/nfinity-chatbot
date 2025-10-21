@@ -1,4 +1,4 @@
-const API_BASE = "/api"; // Vite proxy: /api → backend
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const SID_KEY = "nfinity_session_id";
 function getSessionId() {
