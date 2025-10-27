@@ -29,6 +29,7 @@ Response displayed to user
 ### 1. **Backend Endpoints**
 
 #### Upload Endpoint
+
 ```
 POST http://localhost:3000/upload/images
 Content-Type: multipart/form-data
@@ -45,6 +46,7 @@ Response:
 ```
 
 #### Chat Endpoint (Updated)
+
 ```
 POST http://localhost:3000/chat
 Content-Type: application/json
@@ -71,12 +73,14 @@ Response:
 #### Files Modified:
 
 **`src/api/chatClient.js`**
+
 - ✅ Added `uploadImage(file)` function
 - ✅ Updated `sendChat(message, imageUrls)` signature
 - ✅ 30-second timeout for image uploads
 - ✅ Proper error handling
 
 **`src/components/ChatInput.jsx`**
+
 - ✅ Import `uploadImage` function
 - ✅ Added `isUploading` state
 - ✅ Updated `handleFormSubmit` to upload images first
@@ -86,6 +90,7 @@ Response:
 - ✅ Pass `imageUrls` array to `sendChat()`
 
 **`src/components/ChatMessage.jsx`**
+
 - ✅ Use `previewUrl` for immediate display
 - ✅ Fallback to `url` for Cloudinary URL
 - ✅ Proper image error handling
@@ -95,26 +100,30 @@ Response:
 ### User Interaction Flow:
 
 1. **AI asks for images:**
+
    ```
    Bot: "Please share a photo of the damaged product"
    ```
 
 2. **User clicks 📎 button:**
+
    - File picker opens
    - User selects image (JPEG, PNG, GIF, WebP)
    - Preview appears immediately
 
 3. **User types message and sends:**
+
    ```
    User: "Here's the damage" [with image attached]
    ```
 
 4. **Behind the scenes:**
+
    ```javascript
    // Step 1: Upload image
    const cloudinaryUrl = await uploadImage(file);
    // "https://res.cloudinary.com/demo/image/upload/v123/abc.jpg"
-   
+
    // Step 2: Send to chat
    await sendChat("Here's the damage", [cloudinaryUrl]);
    ```
@@ -126,12 +135,12 @@ Response:
 
 ## 🎨 UI States
 
-| State | Button | Input | Placeholder |
-|-------|--------|-------|-------------|
-| Idle | ✅ Enabled | ✅ Enabled | "Type a message..." |
+| State     | Button      | Input       | Placeholder          |
+| --------- | ----------- | ----------- | -------------------- |
+| Idle      | ✅ Enabled  | ✅ Enabled  | "Type a message..."  |
 | Uploading | ❌ Disabled | ❌ Disabled | "Uploading image..." |
-| Sending | ❌ Disabled | ❌ Disabled | "Sending..." |
-| Error | ✅ Enabled | ✅ Enabled | Shows error message |
+| Sending   | ❌ Disabled | ❌ Disabled | "Sending..."         |
+| Error     | ✅ Enabled  | ✅ Enabled  | Shows error message  |
 
 ## 🔒 Validation & Limits
 
@@ -185,14 +194,18 @@ Response:
 ## 🐛 Troubleshooting
 
 ### Issue: "Upload failed: 404"
+
 **Solution:** Backend server not running or wrong API_BASE URL
+
 ```bash
 # Check .env file
 VITE_API_BASE=http://localhost:3000
 ```
 
 ### Issue: "Upload failed: 500"
+
 **Solution:** Cloudinary credentials not configured
+
 ```bash
 # Check backend .env
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -201,7 +214,9 @@ CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### Issue: Images not appearing in chat
+
 **Solution:** Check console for CORS or image load errors
+
 ```javascript
 // Should see in console:
 ✅ Image uploaded successfully: https://...
@@ -209,7 +224,9 @@ CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### Issue: "Request timeout"
+
 **Solution:** Large image or slow connection
+
 - Reduce image size before upload
 - Check network connection
 - Increase timeout in chatClient.js
@@ -217,11 +234,13 @@ CLOUDINARY_API_SECRET=your_api_secret
 ## 📊 Performance Considerations
 
 ### Image Optimization (Backend):
+
 - Images auto-resized to max 1200x1200
 - Converted to WebP format
 - Cloudinary CDN delivery
 
 ### Frontend Optimization:
+
 - Preview shown immediately (no upload wait)
 - Upload happens on submit
 - Lazy loading for message images
@@ -239,27 +258,29 @@ CLOUDINARY_API_SECRET=your_api_secret
 ## 📝 Code Examples
 
 ### Upload Single Image:
+
 ```javascript
-import { uploadImage } from './api/chatClient';
+import { uploadImage } from "./api/chatClient";
 
 const file = fileInput.files[0];
 try {
   const url = await uploadImage(file);
-  console.log('Uploaded:', url);
+  console.log("Uploaded:", url);
 } catch (err) {
-  console.error('Upload failed:', err.message);
+  console.error("Upload failed:", err.message);
 }
 ```
 
 ### Send Message with Image:
+
 ```javascript
-import { sendChat } from './api/chatClient';
+import { sendChat } from "./api/chatClient";
 
 const message = "Here's the damage";
 const imageUrls = ["https://res.cloudinary.com/demo/image/upload/v1/abc.jpg"];
 
 const response = await sendChat(message, imageUrls);
-console.log('Bot reply:', response);
+console.log("Bot reply:", response);
 ```
 
 ## 🎯 Next Steps (Future Enhancements)

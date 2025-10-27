@@ -68,7 +68,7 @@ const Chat = () => {
       if (isFirstMount.current) {
         isFirstMount.current = false;
       }
-      
+
       // Don't reload if history is already loaded and we're not explicitly asking for reload
       if (historyLoaded && !shouldReloadHistory) {
         console.log("⏭️ Skipping history load - already loaded");
@@ -134,7 +134,9 @@ const Chat = () => {
               ...(msg.type && { type: msg.type }),
               ...(msg.image && { image: msg.image }),
               ...(msg.images && { images: msg.images }),
-              ...(msg.imageUrls && { images: msg.imageUrls.map(url => ({ url })) }),
+              ...(msg.imageUrls && {
+                images: msg.imageUrls.map((url) => ({ url })),
+              }),
             };
           });
 
@@ -145,7 +147,9 @@ const Chat = () => {
             "💬 Setting chat history with messages:",
             orderedMessages
           );
-          console.log("⚠️ WARNING: Replacing entire chat history from server load");
+          console.log(
+            "⚠️ WARNING: Replacing entire chat history from server load"
+          );
           setChatHistory(orderedMessages);
         } else {
           console.log("⚠️ No messages to display");

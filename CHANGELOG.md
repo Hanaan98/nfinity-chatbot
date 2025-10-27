@@ -5,6 +5,7 @@
 ### ✨ Added - Image Upload Feature
 
 #### New Features
+
 - **Complete image upload workflow** with Cloudinary integration
 - **Real-time upload progress** indicators
 - **Image preview** before sending
@@ -14,12 +15,14 @@
 #### Modified Files
 
 **`src/api/chatClient.js`**
+
 - Added `uploadImage(file)` function to upload images to `/upload/images` endpoint
 - Updated `sendChat(message, imageUrls)` to accept optional imageUrls array
 - Enhanced error handling for upload failures
 - Added 30-second timeout for image uploads
 
 **`src/components/ChatInput.jsx`**
+
 - Added `isUploading` state for upload progress tracking
 - Modified `handleFormSubmit` to upload images before sending messages
 - Updated UI to show "Uploading image..." placeholder
@@ -28,6 +31,7 @@
 - Enhanced error messages for upload failures
 
 **`src/components/ChatMessage.jsx`**
+
 - Updated to use `previewUrl` for immediate display
 - Fallback to Cloudinary `url` if preview not available
 - Maintained existing image error handling
@@ -43,15 +47,18 @@
 #### Technical Details
 
 **Upload Flow:**
+
 ```
 File Selection → Preview → Upload to /upload/images → Get URL → Send to /chat
 ```
 
 **API Integration:**
+
 - Upload: `POST /upload/images` (multipart/form-data)
 - Chat: `POST /chat` (with imageUrls array)
 
 **Validation:**
+
 - Max file size: 10 MB
 - Allowed types: JPEG, PNG, GIF, WebP
 - Upload timeout: 30 seconds
@@ -60,16 +67,19 @@ File Selection → Preview → Upload to /upload/images → Get URL → Send to 
 #### UI/UX Improvements
 
 **Loading States:**
+
 - "Uploading image..." - during Cloudinary upload
 - "Sending..." - during chat API call
 - Disabled inputs during both states
 
 **Error Handling:**
+
 - File validation errors shown immediately
 - Upload failures display error message
 - Retry option available on failure
 
 **User Feedback:**
+
 - Image preview with file name and size
 - Remove image button (X) before sending
 - Progress indicators (pulse animation)
@@ -77,6 +87,7 @@ File Selection → Preview → Upload to /upload/images → Get URL → Send to 
 #### Testing Notes
 
 **Test Scenarios:**
+
 1. Upload single image with text message ✅
 2. Upload image without text (sends "Image uploaded") ✅
 3. File too large (shows error) ✅
@@ -85,6 +96,7 @@ File Selection → Preview → Upload to /upload/images → Get URL → Send to 
 6. Multiple sequential uploads ✅
 
 **Backend Integration:**
+
 - Works with existing `/upload/images` endpoint
 - Compatible with `/chat` endpoint's imageUrls parameter
 - AI can access and process image URLs
@@ -98,12 +110,14 @@ File Selection → Preview → Upload to /upload/images → Get URL → Send to 
 #### Configuration Required
 
 **`.env` file:**
+
 ```
 VITE_API_BASE=http://localhost:3000
 VITE_HTTP_TIMEOUT_MS=60000
 ```
 
 **Backend must have:**
+
 - Cloudinary credentials configured
 - `/upload/images` endpoint active
 - `/chat` endpoint accepting imageUrls

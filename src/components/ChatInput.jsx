@@ -308,15 +308,20 @@ export default function ChatInput({
         if (hasImage && files.length > 0) {
           try {
             setIsUploading(true);
-            console.log(`📤 Uploading ${files.length} image(s) to Cloudinary...`);
-            
+            console.log(
+              `📤 Uploading ${files.length} image(s) to Cloudinary...`
+            );
+
             // Upload all files in parallel
             const uploadPromises = files.map(({ file }) => uploadImage(file));
-            uploadedImageUrls.push(...await Promise.all(uploadPromises));
-            
-            console.log('✅ All images uploaded successfully:', uploadedImageUrls);
+            uploadedImageUrls.push(...(await Promise.all(uploadPromises)));
+
+            console.log(
+              "✅ All images uploaded successfully:",
+              uploadedImageUrls
+            );
           } catch (uploadErr) {
-            console.error('❌ Image upload failed:', uploadErr);
+            console.error("❌ Image upload failed:", uploadErr);
             setError(`Failed to upload images: ${uploadErr.message}`);
             setIsSubmitting(false);
             setIsUploading(false);
@@ -343,14 +348,14 @@ export default function ChatInput({
             size: fileData.size,
           }));
         }
-        
-        console.log('👤 Created user message:', {
+
+        console.log("👤 Created user message:", {
           id: userMsg.id,
           hasText: !!userMsg.text,
           text: userMsg.text,
           hasImages: !!userMsg.images,
           imagesCount: userMsg.images?.length,
-          images: userMsg.images
+          images: userMsg.images,
         });
 
         // order keywords
@@ -367,9 +372,14 @@ export default function ChatInput({
         if (isOrderRelated && setIsOrderQuery) setIsOrderQuery(true);
 
         // Add user message
-        console.log('📝 Adding user message to history:', userMsg);
+        console.log("📝 Adding user message to history:", userMsg);
         setHistory((h) => {
-          console.log('� Previous history length:', h.length, 'New length will be:', h.length + 1);
+          console.log(
+            "� Previous history length:",
+            h.length,
+            "New length will be:",
+            h.length + 1
+          );
           return [...h, userMsg];
         });
 
@@ -391,8 +401,12 @@ export default function ChatInput({
         setHistory((h) => [...h, tempMessage]);
 
         // Step 3: Send message to chat API with image URLs
-        const imageUrls = uploadedImageUrls.length > 0 ? uploadedImageUrls : null;
-        const apiPromise = sendChat(userMsg.text || "Images uploaded", imageUrls);
+        const imageUrls =
+          uploadedImageUrls.length > 0 ? uploadedImageUrls : null;
+        const apiPromise = sendChat(
+          userMsg.text || "Images uploaded",
+          imageUrls
+        );
         const timeoutPromise = new Promise((_, reject) => {
           submitTimeoutRef.current = setTimeout(() => {
             reject(new Error("Request timeout"));
@@ -505,24 +519,24 @@ export default function ChatInput({
       }
 
       setFileError("");
-      
+
       // Create preview URLs for all files
-      const filesWithPreviews = validatedFiles.map(file => ({
+      const filesWithPreviews = validatedFiles.map((file) => ({
         file,
         previewUrl: URL.createObjectURL(file),
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
       }));
 
-      setFiles(prev => [...prev, ...filesWithPreviews]);
+      setFiles((prev) => [...prev, ...filesWithPreviews]);
       taRef.current?.focus();
     },
     [files.length, validateFile]
   );
 
   const clearFile = useCallback((index) => {
-    setFiles(prev => {
+    setFiles((prev) => {
       const newFiles = [...prev];
       const removed = newFiles.splice(index, 1)[0];
       if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
@@ -564,7 +578,10 @@ export default function ChatInput({
       {files.length > 0 && (
         <div className="mb-3 space-y-2">
           {files.map((fileData, index) => (
-            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+            <div
+              key={index}
+              className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+            >
               <div className="w-10 h-10 rounded-md overflow-hidden border border-gray-200 flex-shrink-0">
                 <img
                   src={fileData.previewUrl}
@@ -686,10 +703,10 @@ export default function ChatInput({
         <button
           type="submit"
           aria-label={
-            isUploading 
-              ? "Uploading image..." 
-              : isSubmitting 
-              ? "Sending message..." 
+            isUploading
+              ? "Uploading image..."
+              : isSubmitting
+              ? "Sending message..."
               : "Send message"
           }
           disabled={!canSubmit}

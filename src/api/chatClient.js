@@ -130,22 +130,22 @@ function normalizeResponse(data) {
 }
 
 export async function sendChat(message, imageUrls = null) {
-  const body = { 
-    message, 
-    sessionId: getSessionId()
+  const body = {
+    message,
+    sessionId: getSessionId(),
   };
-  
+
   // Add imageUrls array if images were uploaded
   if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
     body.imageUrls = imageUrls;
   }
-  
+
   const endpoint = `${API_BASE}/chat`;
 
   console.log("🚀 Sending chat message:", {
     message,
     sessionId: body.sessionId,
-    imageUrls: body.imageUrls || 'none',
+    imageUrls: body.imageUrls || "none",
     endpoint,
   });
 
@@ -314,23 +314,23 @@ export async function getMessages({ after } = {}) {
  */
 export async function uploadImage(file) {
   const formData = new FormData();
-  formData.append('images', file); // Note: backend expects 'images' field name
-  formData.append('sessionId', getSessionId());
+  formData.append("images", file); // Note: backend expects 'images' field name
+  formData.append("sessionId", getSessionId());
 
   const endpoint = `${API_BASE}/upload/images`;
-  
-  console.log('📤 Uploading image:', {
+
+  console.log("📤 Uploading image:", {
     filename: file.name,
     size: file.size,
     type: file.type,
-    endpoint
+    endpoint,
   });
 
   try {
     const res = await fetchWithTimeout(
       endpoint,
       {
-        method: 'POST',
+        method: "POST",
         body: formData,
         // Don't set Content-Type header - browser sets it with multipart boundary
       },
@@ -338,61 +338,68 @@ export async function uploadImage(file) {
     );
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error('❌ Upload failed:', {
+      const text = await res.text().catch(() => "");
+      console.error("❌ Upload failed:", {
         status: res.status,
         statusText: res.statusText,
-        body: text
+        body: text,
       });
-      throw new Error(`Upload failed: ${res.status} - ${text || res.statusText}`);
+      throw new Error(
+        `Upload failed: ${res.status} - ${text || res.statusText}`
+      );
     }
 
     const data = await res.json();
-    console.log('✅ Upload response received:', {
+    console.log("✅ Upload response received:", {
       rawData: data,
       dataType: typeof data,
       isArray: Array.isArray(data),
-      keys: typeof data === 'object' ? Object.keys(data) : []
+      keys: typeof data === "object" ? Object.keys(data) : [],
     });
 
     // Handle different response formats from backend
     // Format 1: { success: true, data: { imageUrls: [...] } } (Current backend format)
-    if (data.success && data.data?.imageUrls && Array.isArray(data.data.imageUrls) && data.data.imageUrls.length > 0) {
+    if (
+      data.success &&
+      data.data?.imageUrls &&
+      Array.isArray(data.data.imageUrls) &&
+      data.data.imageUrls.length > 0
+    ) {
       return data.data.imageUrls[0]; // Return first URL
     }
-    
+
     // Format 2: { success: true, urls: [...] }
     if (data.success && Array.isArray(data.urls) && data.urls.length > 0) {
       return data.urls[0]; // Return first URL
     }
-    
+
     // Format 3: { urls: [...] }
     if (Array.isArray(data.urls) && data.urls.length > 0) {
       return data.urls[0];
     }
-    
+
     // Format 4: { url: "..." }
-    if (data.url && typeof data.url === 'string') {
+    if (data.url && typeof data.url === "string") {
       return data.url;
     }
-    
+
     // Format 5: { imageUrls: [...] }
     if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
       return data.imageUrls[0];
     }
-    
+
     // Format 6: Direct array
     if (Array.isArray(data) && data.length > 0) {
       return data[0];
     }
 
-    console.error('❌ Unexpected response format:', data);
+    console.error("❌ Unexpected response format:", data);
     throw new Error(`Invalid upload response format: ${JSON.stringify(data)}`);
   } catch (err) {
-    console.error('❌ Upload error:', {
+    console.error("❌ Upload error:", {
       error: err,
       message: err.message,
-      name: err.name
+      name: err.name,
     });
     throw new Error(`Failed to upload image: ${err.message}`);
   }

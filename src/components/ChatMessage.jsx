@@ -61,13 +61,13 @@ const ChatMessage = React.memo(function ChatMessage({
   // Debug logging for images
   React.useEffect(() => {
     if (chat.images || chat.image) {
-      console.log('📷 ChatMessage images:', {
+      console.log("📷 ChatMessage images:", {
         chatId: chat.id,
         hasImages: !!chat.images,
         imagesCount: chat.images?.length,
         images: chat.images,
         hasImage: !!chat.image,
-        image: chat.image
+        image: chat.image,
       });
     }
   }, [chat.images, chat.image, chat.id]);
@@ -148,37 +148,48 @@ const ChatMessage = React.memo(function ChatMessage({
         )}
 
         {/* Multiple images support */}
-        {chat.images && Array.isArray(chat.images) && chat.images.length > 0 && (
-          <div className="message-images mb-2 grid gap-2" style={{
-            gridTemplateColumns: chat.images.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))'
-          }}>
-            {chat.images.map((img, idx) => (
-              <div key={idx} className="relative">
-                <img
-                  src={img.url || img.previewUrl}
-                  alt={img.name || `Attachment ${idx + 1}`}
-                  className="w-full max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onLoad={handleImageLoad}
-                  onError={(e) => {
-                    console.error('Image load error:', img);
-                    // Fallback to preview URL if Cloudinary URL fails
-                    if (e.target.src === img.url && img.previewUrl) {
-                      e.target.src = img.previewUrl;
-                    } else {
-                      handleImageError();
-                    }
-                  }}
-                  loading="lazy"
-                />
-                {img.name && (
-                  <p className="text-xs text-gray-600 mt-1 truncate" title={img.name}>
-                    {img.name}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {chat.images &&
+          Array.isArray(chat.images) &&
+          chat.images.length > 0 && (
+            <div
+              className="message-images mb-2 grid gap-2"
+              style={{
+                gridTemplateColumns:
+                  chat.images.length === 1
+                    ? "1fr"
+                    : "repeat(auto-fit, minmax(150px, 1fr))",
+              }}
+            >
+              {chat.images.map((img, idx) => (
+                <div key={idx} className="relative">
+                  <img
+                    src={img.url || img.previewUrl}
+                    alt={img.name || `Attachment ${idx + 1}`}
+                    className="w-full max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onLoad={handleImageLoad}
+                    onError={(e) => {
+                      console.error("Image load error:", img);
+                      // Fallback to preview URL if Cloudinary URL fails
+                      if (e.target.src === img.url && img.previewUrl) {
+                        e.target.src = img.previewUrl;
+                      } else {
+                        handleImageError();
+                      }
+                    }}
+                    loading="lazy"
+                  />
+                  {img.name && (
+                    <p
+                      className="text-xs text-gray-600 mt-1 truncate"
+                      title={img.name}
+                    >
+                      {img.name}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
         <div className="message-text" onClick={handleClick}>
           {showDots ? (
@@ -191,10 +202,17 @@ const ChatMessage = React.memo(function ChatMessage({
             <div className="flex flex-col gap-2">
               {isError && (
                 <div className="flex items-center gap-2 mb-2 text-red-600">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                   </svg>
-                  <span className="text-sm font-medium">Message failed to send</span>
+                  <span className="text-sm font-medium">
+                    Message failed to send
+                  </span>
                 </div>
               )}
 
@@ -212,7 +230,10 @@ const ChatMessage = React.memo(function ChatMessage({
               )}
 
               {isError && onRetry && (
-                <RetryButton onRetry={handleRetry} disabled={isModel && isTyping} />
+                <RetryButton
+                  onRetry={handleRetry}
+                  disabled={isModel && isTyping}
+                />
               )}
             </div>
           )}
