@@ -12,6 +12,7 @@ import ChatMessage from "../components/ChatMessage";
 import ChatInput from "../components/ChatInput";
 import { useChat } from "../context/UseChat";
 import ProductCarousel from "../components/product/ProductCarousel";
+import { getMessages } from "../api/chatClient";
 
 const SCROLL_THRESHOLD = 80;
 const MODAL_Z_INDEX = 50;
@@ -28,9 +29,19 @@ const Chat = () => {
   const [emailError, setEmailError] = useState("");
   const [orderError, setOrderError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const isFirstMount = useRef(true);
 
-  const { setView, showChatbot, setShowChatbot, chatHistory, setChatHistory } =
-    useChat();
+  const {
+    setView,
+    showChatbot,
+    setShowChatbot,
+    chatHistory,
+    setChatHistory,
+    shouldReloadHistory,
+    setShouldReloadHistory,
+  } = useChat();
 
   const formattedDate = useMemo(() => {
     const today = new Date();
@@ -40,7 +51,132 @@ const Chat = () => {
     });
   }, []);
 
-  const handleBackClick = useCallback(() => setView("home"), [setView]);
+  // Load chat history when component mounts or when returning to chat view
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      // Skip if already loaded and not explicitly told to reload
+      if (historyLoaded && !shouldReloadHistory) return;
+
+      // Skip on first mount if chat already has messages (HelpMenu just added them)
+      if (isFirstMount.current && chatHistory.length > 0) {
+        isFirstMount.current = false;
+        setHistoryLoaded(true);
+        return;
+      }
+
+      // Mark that we've mounted at least once
+      if (isFirstMount.current) {
+        isFirstMount.current = false;
+      }
+      
+      // Don't reload if history is already loaded and we're not explicitly asking for reload
+      if (historyLoaded && !shouldReloadHistory) {
+        console.log("⏭️ Skipping history load - already loaded");
+        return;
+      }
+
+      // Small delay to let HelpMenu add messages first
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Check again if messages were added by HelpMenu
+      if (chatHistory.length > 0 && !shouldReloadHistory) {
+        console.log("⏭️ Skipping history load - messages already present");
+        setHistoryLoaded(true);
+        return;
+      }
+
+      setIsLoadingHistory(true);
+      try {
+        console.log("🔄 Loading chat history...");
+
+        // Load all pages of messages
+        let allMessages = [];
+        let cursor = null;
+        let hasMore = true;
+
+        while (hasMore) {
+          const response = await getMessages({ after: cursor });
+          console.log("📦 Received response:", response);
+
+          if (response.messages && Array.isArray(response.messages)) {
+            allMessages = [...allMessages, ...response.messages];
+            cursor = response.cursor;
+            hasMore = response.has_more && cursor;
+            console.log(
+              `📄 Loaded ${response.messages.length} messages, total: ${allMessages.length}, hasMore: ${hasMore}`
+            );
+          } else {
+            hasMore = false;
+          }
+        }
+
+        console.log(`✅ Found ${allMessages.length} total messages`);
+
+        if (allMessages.length > 0) {
+          // Transform backend messages to match our chat format
+          const transformedMessages = allMessages.map((msg) => {
+            // Handle content that might be an object or string
+            let messageText = "";
+            if (typeof msg.content === "string") {
+              messageText = msg.content;
+            } else if (msg.content && typeof msg.content === "object") {
+              messageText = msg.content.message || msg.content.text || "";
+            }
+
+            return {
+              id: msg.id || msg._id || `msg_${Date.now()}_${Math.random()}`,
+              role: msg.role === "assistant" ? "model" : msg.role || "user",
+              text: messageText || msg.text || msg.message || "",
+              time: msg.created_at
+                ? new Date(msg.created_at * 1000).toLocaleTimeString()
+                : msg.time || msg.timestamp || new Date().toISOString(),
+              ...(msg.products && { products: msg.products }),
+              ...(msg.type && { type: msg.type }),
+              ...(msg.image && { image: msg.image }),
+              ...(msg.images && { images: msg.images }),
+              ...(msg.imageUrls && { images: msg.imageUrls.map(url => ({ url })) }),
+            };
+          });
+
+          // Reverse the array to show oldest messages first
+          const orderedMessages = transformedMessages.reverse();
+
+          console.log(
+            "💬 Setting chat history with messages:",
+            orderedMessages
+          );
+          console.log("⚠️ WARNING: Replacing entire chat history from server load");
+          setChatHistory(orderedMessages);
+        } else {
+          console.log("⚠️ No messages to display");
+        }
+
+        setHistoryLoaded(true);
+        setShouldReloadHistory(false);
+      } catch (error) {
+        console.error("❌ Failed to load chat history:", error);
+        // Don't show error to user, just start with empty history
+        setHistoryLoaded(true);
+        setShouldReloadHistory(false);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadChatHistory();
+  }, [
+    shouldReloadHistory,
+    historyLoaded,
+    // Removed chatHistory.length to prevent reload when messages are added
+    setChatHistory,
+    setShouldReloadHistory,
+  ]);
+
+  const handleBackClick = useCallback(() => {
+    // Just go back to home - don't change reload flag
+    // History will be preserved and reloaded when returning to same topic
+    setView("home");
+  }, [setView]);
   const handleMinimize = useCallback(
     () => setShowChatbot(false),
     [setShowChatbot]
@@ -103,6 +239,17 @@ const Chat = () => {
     });
     return () => cancelAnimationFrame(rafId);
   }, [chatHistory, isNearBottom, scrollToBottom]);
+
+  // Force scroll to bottom when chat history is first loaded or when new messages arrive
+  useEffect(() => {
+    if (chatHistory.length > 0 && !isLoadingHistory) {
+      // Small delay to ensure DOM is rendered
+      const timer = setTimeout(() => {
+        scrollToBottom(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [chatHistory.length, isLoadingHistory, scrollToBottom]);
 
   useEffect(() => {
     const el = chatBodyRef.current;
@@ -277,7 +424,7 @@ const Chat = () => {
               onContentChange={handleContentChange}
             />
           )}
-          {chat.products && <ProductCarousel products={chat.products || []}/>}
+          {chat.products && <ProductCarousel products={chat.products || []} />}
         </div>
       </div>
     ));
@@ -335,9 +482,60 @@ const Chat = () => {
             aria-live="polite"
             aria-label="Chat messages"
           >
-            {chatMessages}
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex flex-col items-center gap-2">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="animate-spin"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeDasharray="32"
+                      strokeDashoffset="32"
+                      opacity="0.25"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeDasharray="32"
+                      strokeDashoffset="32"
+                      strokeLinecap="round"
+                      opacity="0.75"
+                    >
+                      <animate
+                        attributeName="stroke-dasharray"
+                        dur="1.5s"
+                        values="0 32;16 16;0 32;0 32"
+                        repeatCount="indefinite"
+                      />
+                      <animate
+                        attributeName="stroke-dashoffset"
+                        dur="1.5s"
+                        values="0;-16;-32;-32"
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                  </svg>
+                  <span className="text-sm text-gray-500">
+                    Loading chat history...
+                  </span>
+                </div>
+              </div>
+            ) : (
+              chatMessages
+            )}
             <div ref={endRef} aria-hidden="true" />
-            
           </div>
 
           <ChatInput

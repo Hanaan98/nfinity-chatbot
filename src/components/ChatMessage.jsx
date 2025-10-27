@@ -58,6 +58,20 @@ const ChatMessage = React.memo(function ChatMessage({
   const [showTime, setShowTime] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  // Debug logging for images
+  React.useEffect(() => {
+    if (chat.images || chat.image) {
+      console.log('📷 ChatMessage images:', {
+        chatId: chat.id,
+        hasImages: !!chat.images,
+        imagesCount: chat.images?.length,
+        images: chat.images,
+        hasImage: !!chat.image,
+        image: chat.image
+      });
+    }
+  }, [chat.images, chat.image, chat.id]);
+
   const isModel = chat.role === "model";
   const isTyping = Boolean(chat.isTyping);
   const isError = Boolean(chat.isError);
@@ -110,11 +124,12 @@ const ChatMessage = React.memo(function ChatMessage({
 
       {/* Standard bubble (no carousel logic here) */}
       <div className="message-wrap">
+        {/* Support both single image (old format) and multiple images (new format) */}
         {chat.image?.url && (
           <div className="message-image mb-2">
             {!imageError ? (
               <img
-                src={chat.image.url}
+                src={chat.image.previewUrl || chat.image.url}
                 alt={chat.image.name || "Message attachment"}
                 className="max-w-full max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
                 onLoad={handleImageLoad}
@@ -129,6 +144,39 @@ const ChatMessage = React.memo(function ChatMessage({
             {chat.image?.name && !imageError && (
               <p className="text-xs text-gray-600 mt-1">{chat.image.name}</p>
             )}
+          </div>
+        )}
+
+        {/* Multiple images support */}
+        {chat.images && Array.isArray(chat.images) && chat.images.length > 0 && (
+          <div className="message-images mb-2 grid gap-2" style={{
+            gridTemplateColumns: chat.images.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))'
+          }}>
+            {chat.images.map((img, idx) => (
+              <div key={idx} className="relative">
+                <img
+                  src={img.url || img.previewUrl}
+                  alt={img.name || `Attachment ${idx + 1}`}
+                  className="w-full max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  onLoad={handleImageLoad}
+                  onError={(e) => {
+                    console.error('Image load error:', img);
+                    // Fallback to preview URL if Cloudinary URL fails
+                    if (e.target.src === img.url && img.previewUrl) {
+                      e.target.src = img.previewUrl;
+                    } else {
+                      handleImageError();
+                    }
+                  }}
+                  loading="lazy"
+                />
+                {img.name && (
+                  <p className="text-xs text-gray-600 mt-1 truncate" title={img.name}>
+                    {img.name}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         )}
 

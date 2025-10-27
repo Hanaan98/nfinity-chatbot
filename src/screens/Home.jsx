@@ -7,8 +7,7 @@ import { useChat } from "../context/UseChat";
 const Home = () => {
   const { showChatbot, setShowChatbot } = useChat();
 
-
-  const defaultItems = useMemo(
+  const generalItems = useMemo(
     () => [
       {
         id: "gpt_chat",
@@ -30,6 +29,19 @@ const Home = () => {
         ],
       },
       {
+        id: "uniforms",
+        label: "Uniform collections & customization",
+        ChatHistory: [
+          {
+            role: "user",
+            text: "I'm interested in learning about uniforms.",
+            id: "uniforms",
+            time: new Date().toLocaleTimeString(),
+            isProductRecommendation: false,
+          },
+        ],
+      },
+      {
         id: "sizing",
         label: "Sizing & fit guide",
         ChatHistory: [
@@ -37,6 +49,51 @@ const Home = () => {
             role: "user",
             text: "Seeking sizing and fit guidance.",
             id: "sizing",
+            time: new Date().toLocaleTimeString(),
+            isProductRecommendation: false,
+          },
+        ],
+      },
+    ],
+    []
+  );
+
+  const orderIssuesItems = useMemo(
+    () => [
+      {
+        id: "order_status",
+        label: "Order status & shipping",
+        ChatHistory: [
+          {
+            role: "user",
+            text: "I need help with my order status and shipping information.",
+            id: "order_status",
+            time: new Date().toLocaleTimeString(),
+            isProductRecommendation: false,
+          },
+        ],
+      },
+      {
+        id: "error_order",
+        label: "Wrong item or address",
+        ChatHistory: [
+          {
+            role: "user",
+            text: "I received the wrong item or there's an issue with my shipping address.",
+            id: "error_order",
+            time: new Date().toLocaleTimeString(),
+            isProductRecommendation: false,
+          },
+        ],
+      },
+      {
+        id: "quality_issues",
+        label: "Defects & quality issues",
+        ChatHistory: [
+          {
+            role: "user",
+            text: "I received a defective item or have quality concerns.",
+            id: "quality_issues",
             time: new Date().toLocaleTimeString(),
             isProductRecommendation: false,
           },
@@ -50,6 +107,25 @@ const Home = () => {
             role: "user",
             text: "Assistance with returns and exchanges.",
             id: "returns",
+            time: new Date().toLocaleTimeString(),
+            isProductRecommendation: false,
+          },
+        ],
+      },
+    ],
+    []
+  );
+
+  const otherItems = useMemo(
+    () => [
+      {
+        id: "events",
+        label: "Events & other questions",
+        ChatHistory: [
+          {
+            role: "user",
+            text: "I have questions about events or other topics.",
+            id: "events",
             time: new Date().toLocaleTimeString(),
             isProductRecommendation: false,
           },
@@ -144,8 +220,10 @@ const Home = () => {
             <p>Ask anything, or start with a popular topic.</p>
           </div>
 
-          <HelpMenu items={defaultItems} />
+          <HelpMenu items={generalItems} />
           <HelpMenu items={trackItems} />
+          <HelpMenu items={orderIssuesItems} />
+          <HelpMenu items={otherItems} />
         </div>
       </div>
     </Chatbot>
