@@ -424,6 +424,7 @@ const Chat = () => {
           {(chat.text || chat.products || chat.image || chat.isTyping) && (
             <ChatMessage
               chat={chat}
+              sessionId={chat.sessionId}
               onMediaLoad={handleMediaLoad}
               onContentChange={handleContentChange}
             />

@@ -8,12 +8,6 @@ import React, {
 } from "react";
 import ChatbotIcon from "./ChatbotIcon";
 
-const formatTime = (date) => {
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (!d || isNaN(d.getTime())) return "Invalid time";
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
-
 // sanitize + lightweight markdown
 const sanitizeText = (text) =>
   typeof text !== "string"
@@ -54,9 +48,11 @@ const ChatMessage = React.memo(function ChatMessage({
   onMediaLoad,
   onContentChange,
   onRetry,
+  sessionId, // Added for feedback
 }) {
   const [showTime, setShowTime] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   // Debug logging for images
   React.useEffect(() => {
@@ -76,11 +72,10 @@ const ChatMessage = React.memo(function ChatMessage({
   const isTyping = Boolean(chat.isTyping);
   const isError = Boolean(chat.isError);
 
-  const messageTime = useMemo(() => chat.time || new Date(), [chat.time]);
   const content = chat.text ?? "";
 
-  // typing indicator should show when assistant is typing OR there's no content yet
-  const showDots = isModel && (isTyping || !content);
+  // typing indicator should show when assistant is typing AND there's no content yet
+  const showDots = isModel && isTyping && !content;
 
   const formattedContent = useMemo(() => formatMessage(content), [content]);
 
@@ -218,7 +213,7 @@ const ChatMessage = React.memo(function ChatMessage({
 
               {content ? (
                 <div
-                  className="message-content"
+                  className="message-content message-enter"
                   dangerouslySetInnerHTML={{ __html: formattedContent }}
                 />
               ) : (

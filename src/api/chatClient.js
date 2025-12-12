@@ -129,6 +129,120 @@ function normalizeResponse(data) {
   return result;
 }
 
+/**
+ * Send a chat message with SSE streaming support
+ * @param {string} message - The message to send
+ * @param {Array<string>} imageUrls - Optional array of image URLs
+ * @param {Object} callbacks - Callback functions for streaming events
+ * @param {Function} callbacks.onStart - Called when streaming starts
+ * @param {Function} callbacks.onStatus - Called with status updates (thinking/analyzing/finalizing)
+ * @param {Function} callbacks.onToken - Called with each token/character
+ * @param {Function} callbacks.onComplete - Called when message is complete
+ * @param {Function} callbacks.onError - Called on error
+ * @returns {Promise<void>}
+ */
+export async function sendChatStream(
+  message,
+  imageUrls = null,
+  callbacks = {}
+) {
+  const body = {
+    message,
+    sessionId: getSessionId(),
+  };
+
+  if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+    body.imageUrls = imageUrls;
+  }
+
+  const endpoint = `${API_BASE}/chat/stream`;
+
+  console.log("🌊 Starting streaming chat:", {
+    message,
+    sessionId: body.sessionId,
+    imageUrls: body.imageUrls || "none",
+    endpoint,
+  });
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(
+        `API ${response.status}: ${errorText || response.statusText}`
+      );
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    callbacks.onStart?.();
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        console.log("✅ Stream complete");
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        if (!line.startsWith("data: ")) {
+          console.warn("Invalid SSE line:", line);
+          continue;
+        }
+
+        const data = line.slice(6); // Remove "data: " prefix
+
+        if (data === "[DONE]") {
+          callbacks.onComplete?.();
+          continue;
+        }
+
+        try {
+          const event = JSON.parse(data);
+
+          console.log("Received SSE event:", event);
+
+          switch (event.type) {
+            case "token":
+              callbacks.onToken?.(event.token);
+              break;
+
+            case "complete":
+              console.log("Message complete:", event.fullText);
+              callbacks.onComplete?.(event.fullText, event.messageId);
+              break;
+
+            case "error":
+              console.error("Stream error from server:", event);
+              callbacks.onError?.(new Error(event.message || "Stream error"));
+              break;
+          }
+        } catch (parseError) {
+          console.warn("Failed to parse SSE data:", data, parseError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("❌ Streaming error:", error);
+    callbacks.onError?.(error);
+    throw error;
+  }
+}
+
 export async function sendChat(message, imageUrls = null) {
   const body = {
     message,

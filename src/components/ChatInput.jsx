@@ -6,7 +6,11 @@ import React, {
   useCallback,
 } from "react";
 import { useChat } from "../context/UseChat";
-import { sendChat, uploadImage } from "../api/chatClient";
+import {
+  sendChat,
+  uploadImage,
+  currentSessionId,
+} from "../api/chatClient";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = [
@@ -389,44 +393,49 @@ export default function ChatInput({
 
         resetInputs();
 
-        // temp bot typing
+        // temp bot message for streaming
         const tempId = generateMessageId();
+        const sessionId = currentSessionId();
         const tempMessage = {
           id: tempId,
           role: "model",
           isTyping: true,
           text: "",
           time: new Date().toLocaleTimeString(),
+          sessionId,
         };
         setHistory((h) => [...h, tempMessage]);
 
-        // Step 3: Send message to chat API with image URLs
+        // Step 3: Send message to chat API (non-streaming)
         const imageUrls =
           uploadedImageUrls.length > 0 ? uploadedImageUrls : null;
-        const apiPromise = sendChat(
-          userMsg.text || "Images uploaded",
-          imageUrls
-        );
-        const timeoutPromise = new Promise((_, reject) => {
-          submitTimeoutRef.current = setTimeout(() => {
-            reject(new Error("Request timeout"));
-          }, 65000); // 65 seconds to be longer than API timeout
-        });
 
-        console.log("⏳ Waiting for API response...");
-        const reply = await Promise.race([apiPromise, timeoutPromise]);
-        if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+        try {
+          const reply = await sendChat(userMsg.text || "Images uploaded", imageUrls);
+          console.log("📥 Received reply from API:", reply);
 
-        console.log("📨 API reply received:", reply);
+          const botResponse = normalizeReplyToMessage(reply, tempId);
+          console.log("🤖 Normalized bot response:", botResponse);
 
-        // ---------- normalize reply into either text or carousel message ----------
-        const normalized = normalizeReplyToMessage(reply, tempId);
-        console.log("✨ Message normalized:", normalized);
-
-        // Replace temp typing with final normalized message
-        setHistory((history) =>
-          history.map((m) => (m.id === tempId ? normalized : m))
-        );
+          setHistory((h) =>
+            h.map((m) => (m.id === tempId ? botResponse : m))
+          );
+        } catch (err) {
+          console.error("❌ Chat API error:", err);
+          setHistory((history) =>
+            history.map((m) =>
+              m.id === tempId
+                ? {
+                    ...m,
+                    isTyping: false,
+                    isError: true,
+                    text: err.message || "Failed to get response",
+                  }
+                : m
+            )
+          );
+          setError(err.message || "Failed to send message");
+        }
       } catch (err) {
         console.error("❌ Chat submission error:", {
           error: err,

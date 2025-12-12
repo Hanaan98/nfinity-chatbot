@@ -191,6 +191,7 @@ body {
 .chat-body .bot-message .message-text {
   background: #f6f2ff;
   border-radius: 20px 20px 20px 4px;
+  color: #1f1f1f;
 }
 .chat-body .user-message {
   flex-direction: column;
