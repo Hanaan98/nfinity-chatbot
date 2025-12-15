@@ -9,7 +9,7 @@ export default defineConfig({
   // Build optimization
   build: {
     target: "es2015",
-    minify: "terser",
+    minify: "esbuild",
     sourcemap: false,
     rollupOptions: {
       output: {
