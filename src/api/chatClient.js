@@ -10,6 +10,9 @@ function getSessionId() {
   if (!sid) {
     sid = `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     localStorage.setItem(SID_KEY, sid);
+    console.log("🆕 Created new session ID:", sid);
+  } else {
+    console.log("♻️ Using existing session ID:", sid);
   }
   return sid;
 }
@@ -155,7 +158,8 @@ export async function sendChatStream(
     body.imageUrls = imageUrls;
   }
 
-  const endpoint = `${API_BASE}/chat/stream`;
+  // Use new Chat Completions API endpoint (v2) - 100x better rate limits!
+  const endpoint = `${API_BASE}/chat/stream/v2`;
 
   console.log("🌊 Starting streaming chat:", {
     message,
@@ -220,15 +224,39 @@ export async function sendChatStream(
             case "token":
               callbacks.onToken?.(event.token);
               break;
+              
+            case "status":
+              console.log("📊 Status update:", event.message);
+              callbacks.onStatus?.(event.message);
+              break;
 
             case "complete":
-              console.log("Message complete:", event.fullText);
-              callbacks.onComplete?.(event.fullText, event.messageId);
+              console.log("🎯 Complete event received:", JSON.stringify(event, null, 2));
+              console.log("🔍 Event keys:", Object.keys(event));
+              console.log("📦 Event.content:", event.content);
+              console.log("📝 Event.fullText:", event.fullText);
+              
+              // Pass the full content object (which includes ui_action and payload)
+              let responseData;
+              if (event.content && event.content.ui_action) {
+                // Already have structured content
+                responseData = normalizeResponse({ content: event.content });
+                console.log("✅ Normalized from event.content:", responseData);
+              } else {
+                // Fallback to fullText
+                responseData = event.fullText;
+                console.log("⚠️ Using fullText fallback:", responseData);
+              }
+              
+              callbacks.onComplete?.(responseData, event.messageId);
               break;
 
             case "error":
               console.error("Stream error from server:", event);
-              callbacks.onError?.(new Error(event.message || "Stream error"));
+              const error = new Error(event.message || "Stream error");
+              error.code = event.code;
+              error.retryable = event.retryable;
+              callbacks.onError?.(error);
               break;
           }
         } catch (parseError) {

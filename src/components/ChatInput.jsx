@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { useChat } from "../context/UseChat";
 import {
-  sendChat,
+  sendChatStream,
   uploadImage,
   currentSessionId,
 } from "../api/chatClient";
@@ -204,59 +204,98 @@ export default function ChatInput({
 
   const normalizeReplyToMessage = useCallback(
     (reply, tempId) => {
+      console.log("🔄 normalizeReplyToMessage called with:", reply, "tempId:", tempId);
+      
       // 1) If server returns an object with products
       if (reply && typeof reply === "object") {
-        // a) { type: 'carousel', products: [...] }
+        console.log("📦 Reply is object, checking for products...");
+        
+        // a) Check for ui_action="show_products" with payload.products
+        if (reply.ui_action === "show_products" && reply.payload?.products?.length) {
+          console.log("✅ Found ui_action=show_products with products:", reply.payload.products);
+          return {
+            id: tempId,
+            role: "model",
+            isTyping: false,
+            type: "carousel",
+            products: reply.payload.products,
+            text: reply.message || "",
+          };
+        }
+        
+        // b) { type: 'carousel', products: [...] }
         if (
           (reply.type === "carousel" || reply.isProductRecommendation) &&
           Array.isArray(reply.products) &&
           reply.products.length
         ) {
+          console.log("✅ Found carousel type with products:", reply.products);
           return {
             id: tempId,
             role: "model",
             isTyping: false,
             type: "carousel",
             products: reply.products,
-            // ✅ keep caption if provided
             text: reply.text || reply.message || "",
           };
         }
-        // b) Generic object with products field
+        
+        // c) Generic object with products field
         if (Array.isArray(reply.products) && reply.products.length) {
+          console.log("✅ Found products array:", reply.products);
           return {
             id: tempId,
             role: "model",
             isTyping: false,
             type: "carousel",
             products: reply.products,
-            // ✅ keep caption if provided
             text: reply.text || reply.message || "",
           };
         }
-        // c) Fallback to text if present (support .text or .message)
+        
+        // d) Fallback to text if present (support .text or .message)
         if (reply.text || reply.message) {
+          console.log("ℹ️ Object has text/message but no products");
           return {
             id: tempId,
             role: "model",
             isTyping: false,
             text: String(reply.text || reply.message),
-            type: reply.type, // harmless if undefined
+            type: reply.type,
           };
         }
       }
 
       // 2) If server returns a string
       if (typeof reply === "string") {
+        console.log("📝 Reply is string, attempting JSON parse...");
+        
         // a) Try parse entire string as JSON
         const asJson = safeJsonParse(reply);
         if (asJson) {
+          console.log("✅ Parsed entire string as JSON:", asJson);
           const normalized = normalizeReplyToMessage(asJson, tempId);
           if (normalized) return normalized;
         }
-        // b) Try extract <products>...</products>; keep any leading caption
+        
+        // b) Try extract JSON with ui_action from text (AI might wrap it)
+        const jsonMatch = reply.match(/\{[\s\S]*?"ui_action"[\s\S]*?\}/);
+        if (jsonMatch) {
+          console.log("🔍 Found JSON pattern in text, extracting...");
+          try {
+            const extracted = JSON.parse(jsonMatch[0]);
+            console.log("✅ Extracted and parsed JSON:", extracted);
+            const normalized = normalizeReplyToMessage(extracted, tempId);
+            if (normalized) return normalized;
+          } catch (e) {
+            console.warn("⚠️ Failed to parse extracted JSON:", e);
+          }
+        }
+        
+        // c) Try extract <products>...</products>; keep any leading caption
         const prods = extractProductsFromTags(reply);
         if (prods && prods.length) {
+          console.log("✅ Found products in tags:", prods);
           return {
             id: tempId,
             role: "model",
@@ -266,7 +305,9 @@ export default function ChatInput({
             text: stripProductsTag(reply), // ✅ keep caption outside the tag
           };
         }
-        // c) Plain text
+        
+        // d) Plain text
+        console.log("ℹ️ Treating as plain text");
         return {
           id: tempId,
           role: "model",
@@ -406,20 +447,83 @@ export default function ChatInput({
         };
         setHistory((h) => [...h, tempMessage]);
 
-        // Step 3: Send message to chat API (non-streaming)
+        // Step 3: Send message to chat API with streaming
         const imageUrls =
           uploadedImageUrls.length > 0 ? uploadedImageUrls : null;
 
         try {
-          const reply = await sendChat(userMsg.text || "Images uploaded", imageUrls);
-          console.log("📥 Received reply from API:", reply);
-
-          const botResponse = normalizeReplyToMessage(reply, tempId);
-          console.log("🤖 Normalized bot response:", botResponse);
-
-          setHistory((h) =>
-            h.map((m) => (m.id === tempId ? botResponse : m))
-          );
+          let accumulatedText = "";
+          
+          await sendChatStream(userMsg.text || "Images uploaded", imageUrls, {
+            onStart: () => {
+              console.log("🌊 Frontend: Stream started");
+            },
+            onStatus: (statusMessage) => {
+              console.log("📊 Frontend: Status update:", statusMessage);
+              // Update the typing message with status
+              setHistory((h) =>
+                h.map((m) =>
+                  m.id === tempId
+                    ? { ...m, text: statusMessage, isTyping: true }
+                    : m
+                )
+              );
+            },
+            onToken: (token) => {
+              console.log("📝 Frontend received token:", token);
+              accumulatedText += token;
+              console.log("📝 Accumulated text so far:", accumulatedText);
+              // Update message with accumulated text in real-time
+              setHistory((h) =>
+                h.map((m) =>
+                  m.id === tempId
+                    ? { ...m, text: accumulatedText, isTyping: true }
+                    : m
+                )
+              );
+            },
+            onComplete: (fullText, messageId) => {
+              console.log("✅ Frontend: Stream complete");
+              console.log("📝 fullText received:", fullText);
+              console.log("📝 Type of fullText:", typeof fullText);
+              console.log("📝 accumulatedText:", accumulatedText);
+              
+              // Final update with complete message
+              const finalText = fullText || accumulatedText;
+              console.log("🔄 Calling normalizeReplyToMessage with:", finalText);
+              
+              const botResponse = normalizeReplyToMessage(finalText, tempId);
+              console.log("✨ Normalized bot response:", botResponse);
+              console.log("🎯 Has products?:", !!botResponse.products);
+              
+              setHistory((h) =>
+                h.map((m) => (m.id === tempId ? botResponse : m))
+              );
+            },
+            onError: (err) => {
+              console.error("❌ Frontend: Stream error:", err);
+              
+              // Better error message for rate limits
+              let errorMessage = err.message || "Failed to get response";
+              if (err.code === "RATE_LIMIT" && err.retryable) {
+                errorMessage = "High demand right now. Please wait a few seconds and try again.";
+              }
+              
+              setHistory((history) =>
+                history.map((m) =>
+                  m.id === tempId
+                    ? {
+                        ...m,
+                        isTyping: false,
+                        isError: true,
+                        text: errorMessage,
+                      }
+                    : m
+                )
+              );
+              setError(errorMessage);
+            },
+          });
         } catch (err) {
           console.error("❌ Chat API error:", err);
           setHistory((history) =>

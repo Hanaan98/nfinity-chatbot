@@ -1,6 +1,6 @@
 import { useChat } from "../context/UseChat";
 import { useCallback, useMemo } from "react";
-import { sendChat } from "../api/chatClient";
+import { sendChatStream } from "../api/chatClient";
 
 export default function HelpMenu({ items = [], className = "" }) {
   const { setView, setChatHistory, setShouldReloadHistory } = useChat();
@@ -54,21 +54,55 @@ export default function HelpMenu({ items = [], className = "" }) {
             },
           ]);
 
-          // Send to backend
+          // Send to backend with streaming
           try {
-            const reply = await sendChat(userMessage.text);
-            setChatHistory((prev) =>
-              prev.map((m) =>
-                m.id === botMsgId
-                  ? {
-                      ...m,
-                      isTyping: false,
-                      text: reply,
-                      isProductRecommendation: false,
-                    }
-                  : m
-              )
-            );
+            let accumulatedText = "";
+            
+            await sendChatStream(userMessage.text, null, {
+              onToken: (token) => {
+                accumulatedText += token;
+                setChatHistory((prev) =>
+                  prev.map((m) =>
+                    m.id === botMsgId
+                      ? {
+                          ...m,
+                          isTyping: true,
+                          text: accumulatedText,
+                        }
+                      : m
+                  )
+                );
+              },
+              onComplete: (fullText) => {
+                setChatHistory((prev) =>
+                  prev.map((m) =>
+                    m.id === botMsgId
+                      ? {
+                          ...m,
+                          isTyping: false,
+                          text: fullText || accumulatedText,
+                          isProductRecommendation: false,
+                        }
+                      : m
+                  )
+                );
+              },
+              onError: (error) => {
+                console.error("HelpMenu: streaming error", error);
+                setChatHistory((prev) =>
+                  prev.map((m) =>
+                    m.id === botMsgId
+                      ? {
+                          ...m,
+                          isTyping: false,
+                          isError: true,
+                          text: "Sorry—having trouble reaching the server. Please try again.",
+                        }
+                      : m
+                  )
+                );
+              },
+            });
           } catch (error) {
             console.error("HelpMenu: sendChat error", error);
             setChatHistory((prev) =>

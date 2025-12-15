@@ -140,17 +140,15 @@ const Chat = () => {
             };
           });
 
-          // Reverse the array to show oldest messages first
-          const orderedMessages = transformedMessages.reverse();
-
+          // Messages from backend are already in chronological order (oldest first)
           console.log(
             "💬 Setting chat history with messages:",
-            orderedMessages
+            transformedMessages
           );
           console.log(
             "⚠️ WARNING: Replacing entire chat history from server load"
           );
-          setChatHistory(orderedMessages);
+          setChatHistory(transformedMessages);
         } else {
           console.log("⚠️ No messages to display");
         }

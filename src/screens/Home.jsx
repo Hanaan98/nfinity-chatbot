@@ -5,7 +5,7 @@ import Chatbot from "../Chatbot";
 import { useChat } from "../context/UseChat";
 
 const Home = () => {
-  const { showChatbot, setShowChatbot } = useChat();
+  const { showChatbot, setShowChatbot, setView, setShowReturnsUI } = useChat();
 
   const generalItems = useMemo(
     () => [
@@ -68,32 +68,6 @@ const Home = () => {
             role: "user",
             text: "I need help with my order status and shipping information.",
             id: "order_status",
-            time: new Date().toLocaleTimeString(),
-            isProductRecommendation: false,
-          },
-        ],
-      },
-      {
-        id: "error_order",
-        label: "Wrong item or address",
-        ChatHistory: [
-          {
-            role: "user",
-            text: "I received the wrong item or there's an issue with my shipping address.",
-            id: "error_order",
-            time: new Date().toLocaleTimeString(),
-            isProductRecommendation: false,
-          },
-        ],
-      },
-      {
-        id: "quality_issues",
-        label: "Defects & quality issues",
-        ChatHistory: [
-          {
-            role: "user",
-            text: "I received a defective item or have quality concerns.",
-            id: "quality_issues",
             time: new Date().toLocaleTimeString(),
             isProductRecommendation: false,
           },
