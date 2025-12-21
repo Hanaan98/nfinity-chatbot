@@ -27,8 +27,16 @@ const formatMessage = (text) => {
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
     .replace(
-      /(https?:\/\/[^\s<>"']+)/gi,
-      '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">$1</a>'
+      /(\[([^\]]+)\]\((https?:\/\/[^\)]+)\))|(https?:\/\/[^\s<>"']+)/gi,
+      (match, mdLink, mdText, mdUrl, rawUrl) => {
+        if (mdLink) {
+          return `<a href="${mdUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">${mdText}</a>`;
+        }
+        if (rawUrl) {
+          return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">${rawUrl}</a>`;
+        }
+        return match;
+      }
     );
 };
 
@@ -77,7 +85,11 @@ const ChatMessage = React.memo(function ChatMessage({
   // typing indicator should show when assistant is typing AND there's no content yet
   const showDots = isModel && isTyping && !content;
 
-  const formattedContent = useMemo(() => formatMessage(content), [content]);
+  // Format message content
+  const formattedContent = useMemo(() => {
+    if (!content) return "";
+    return formatMessage(content);
+  }, [content]);
 
   // Fire onContentChange once dots stop (to help parent adjust scroll)
   const prevShowDotsRef = useRef(showDots);

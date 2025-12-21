@@ -117,7 +117,9 @@ function normalizeResponse(data) {
   if (act === "show_products") {
     const products = normalizeProducts(c.payload?.products || []);
     console.log("🛍️ Returning carousel with products:", products);
-    return { type: "carousel", products, text: msg };
+    // Use fullText if available (has the complete cleaned message), otherwise use message
+    const messageText = data.fullText || msg || "";
+    return { type: "carousel", products, text: messageText };
   }
 
   if (act === "redirect") {
@@ -211,7 +213,8 @@ export async function sendChatStream(
         const data = line.slice(6); // Remove "data: " prefix
 
         if (data === "[DONE]") {
-          callbacks.onComplete?.();
+          console.log("✅ Stream complete");
+          // Don't call onComplete here - it will be called by the complete event
           continue;
         }
 
@@ -239,8 +242,11 @@ export async function sendChatStream(
               // Pass the full content object (which includes ui_action and payload)
               let responseData;
               if (event.content && event.content.ui_action) {
-                // Already have structured content
-                responseData = normalizeResponse({ content: event.content });
+                // Already have structured content - add fullText for the message
+                responseData = normalizeResponse({ 
+                  content: event.content,
+                  fullText: event.fullText 
+                });
                 console.log("✅ Normalized from event.content:", responseData);
               } else {
                 // Fallback to fullText

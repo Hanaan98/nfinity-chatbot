@@ -31,6 +31,8 @@ const Chat = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
   const isFirstMount = useRef(true);
 
   const {
@@ -207,6 +209,9 @@ const Chat = () => {
   }, []);
 
   const scrollToBottom = useCallback((smooth = true) => {
+    setIsUserScrolling(false);
+    setShowScrollButton(false);
+    
     if (endRef.current) {
       endRef.current.scrollIntoView({
         behavior: smooth ? "smooth" : "auto",
@@ -232,48 +237,74 @@ const Chat = () => {
     node.scrollIntoView({ behavior: "auto", block: "start" });
   }, []);
 
+  // Track user scrolling behavior
+  useEffect(() => {
+    const el = chatBodyRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const nearBottom = isNearBottom(el);
+      
+      // Show scroll button if user scrolled up
+      if (!nearBottom && !isUserScrolling) {
+        setIsUserScrolling(true);
+        setShowScrollButton(true);
+      } else if (nearBottom) {
+        setIsUserScrolling(false);
+        setShowScrollButton(false);
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [isNearBottom]);
+
   useLayoutEffect(() => {
     const el = chatBodyRef.current;
     if (!el) return;
-    const shouldStick = isNearBottom(el);
-    const rafId = requestAnimationFrame(() => {
-      scrollToBottom(shouldStick);
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [chatHistory, isNearBottom, scrollToBottom]);
+    
+    // Only auto-scroll if user hasn't manually scrolled up
+    if (!isUserScrolling) {
+      const shouldStick = isNearBottom(el);
+      const rafId = requestAnimationFrame(() => {
+        scrollToBottom(shouldStick);
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [chatHistory, isNearBottom, scrollToBottom, isUserScrolling]);
 
   // Force scroll to bottom when chat history is first loaded or when new messages arrive
   useEffect(() => {
-    if (chatHistory.length > 0 && !isLoadingHistory) {
+    if (chatHistory.length > 0 && !isLoadingHistory && !isUserScrolling) {
       // Small delay to ensure DOM is rendered
       const timer = setTimeout(() => {
         scrollToBottom(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [chatHistory.length, isLoadingHistory, scrollToBottom]);
+  }, [chatHistory.length, isLoadingHistory, scrollToBottom, isUserScrolling]);
 
   useEffect(() => {
     const el = chatBodyRef.current;
     if (!el || !("ResizeObserver" in window)) return;
     const ro = new ResizeObserver(() => {
-      if (isNearBottom(el)) scrollToBottom(false);
+      if (!isUserScrolling && isNearBottom(el)) scrollToBottom(false);
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isNearBottom, scrollToBottom]);
+  }, [isNearBottom, scrollToBottom, isUserScrolling]);
 
   useEffect(() => {
     const el = chatBodyRef.current;
     if (!el) return;
     const mo = new MutationObserver(() => {
-      if (isNearBottom(el)) {
+      if (!isUserScrolling && isNearBottom(el)) {
         el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
       }
     });
     mo.observe(el, { childList: true, subtree: true, characterData: true });
     return () => mo.disconnect();
-  }, [isNearBottom]);
+  }, [isNearBottom, isUserScrolling]);
 
   // UPDATED: receive chat to know when to top-anchor carousels
   const handleContentChange = useCallback(
@@ -540,6 +571,35 @@ const Chat = () => {
             )}
             <div ref={endRef} aria-hidden="true" />
           </div>
+
+          {/* Scroll to bottom button */}
+          {showScrollButton && (
+            <button
+              onClick={() => scrollToBottom(true)}
+              className="absolute left-1/2 -translate-x-1/2 bottom-24 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all duration-300 hover:scale-110 cursor-pointer"
+              style={{ 
+                opacity: showScrollButton ? 1 : 0, 
+                transform: showScrollButton ? 'translateX(-50%) scale(1)' : 'translateX(-50%) scale(0.8)',
+                transition: 'opacity 0.3s ease-in-out, transform 0.3s ease-in-out' 
+              }}
+              aria-label="Scroll to bottom"
+              type="button"
+            >
+              <svg
+                className="w-6 h-6 text-gray-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                />
+              </svg>
+            </button>
+          )}
 
           <ChatInput
             setChatHistory={setChatHistory}

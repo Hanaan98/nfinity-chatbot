@@ -206,6 +206,17 @@ export default function ChatInput({
     (reply, tempId) => {
       console.log("🔄 normalizeReplyToMessage called with:", reply, "tempId:", tempId);
       
+      // Handle null/undefined
+      if (!reply) {
+        console.error("❌ Reply is null or undefined");
+        return {
+          id: tempId,
+          role: "model",
+          isTyping: false,
+          text: "Sorry, I couldn't understand the response.",
+        };
+      }
+      
       // 1) If server returns an object with products
       if (reply && typeof reply === "object") {
         console.log("📦 Reply is object, checking for products...");
@@ -486,15 +497,26 @@ export default function ChatInput({
               console.log("✅ Frontend: Stream complete");
               console.log("📝 fullText received:", fullText);
               console.log("📝 Type of fullText:", typeof fullText);
-              console.log("📝 accumulatedText:", accumulatedText);
+              console.log("📝 fullText is null?:", fullText === null);
+              console.log("📝 fullText is undefined?:", fullText === undefined);
               
-              // Final update with complete message
-              const finalText = fullText || accumulatedText;
-              console.log("🔄 Calling normalizeReplyToMessage with:", finalText);
-              
-              const botResponse = normalizeReplyToMessage(finalText, tempId);
-              console.log("✨ Normalized bot response:", botResponse);
-              console.log("🎯 Has products?:", !!botResponse.products);
+              // fullText should already be normalized from chatClient
+              // Check if it's already an object with products
+              let botResponse;
+              try {
+                botResponse = normalizeReplyToMessage(fullText, tempId);
+                console.log("✨ Normalized bot response:", botResponse);
+                console.log("🎯 Has products?:", !!botResponse.products);
+                console.log("🎯 Products count:", botResponse.products?.length);
+              } catch (error) {
+                console.error("❌ Error in normalizeReplyToMessage:", error);
+                botResponse = {
+                  id: tempId,
+                  role: "model",
+                  isTyping: false,
+                  text: "Sorry, something went wrong processing the response.",
+                };
+              }
               
               setHistory((h) =>
                 h.map((m) => (m.id === tempId ? botResponse : m))
