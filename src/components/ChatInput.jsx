@@ -91,8 +91,21 @@ export default function ChatInput({
       messageText.includes(keyword)
     );
 
-    setShowImageButton(requestsImage);
-  }, [chatHistory]);
+    // Determine limit based on context (quality issues usually require 2 specific photos)
+    const isQualityFlow =
+      messageText.includes("two photos") ||
+      messageText.includes("2 photos") ||
+      (messageText.includes("tongue") && messageText.includes("sole"));
+    
+    const currentLimit = isQualityFlow ? 2 : MAX_IMAGES;
+
+    // Hide button if user has reached the limit
+    if (files.length >= currentLimit) {
+      setShowImageButton(false);
+    } else {
+      setShowImageButton(requestsImage);
+    }
+  }, [chatHistory, files.length]);
 
   const validateFile = useCallback((file) => {
     if (!file) return { isValid: false, error: "No file selected" };
