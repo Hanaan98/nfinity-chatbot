@@ -30,10 +30,10 @@ const formatMessage = (text) => {
       /(\[([^\]]+)\]\((https?:\/\/[^\)]+)\))|(https?:\/\/[^\s<>"']+)/gi,
       (match, mdLink, mdText, mdUrl, rawUrl) => {
         if (mdLink) {
-          return `<a href="${mdUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">${mdText}</a>`;
+          return `<a href="${mdUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;text-underline-offset:2px;">${mdText}</a>`;
         }
         if (rawUrl) {
-          return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">${rawUrl}</a>`;
+          return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;text-underline-offset:2px;">${rawUrl}</a>`;
         }
         return match;
       }
@@ -44,7 +44,7 @@ const RetryButton = React.memo(({ onRetry, disabled }) => (
   <button
     onClick={onRetry}
     disabled={disabled}
-    className="mt-2 px-3 py-1 text-sm bg-red-50 text-red-700 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+    className="mt-2 px-3 py-1 text-xs bg-white text-black border border-black rounded-full hover:bg-black hover:text-white focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
     aria-label="Retry sending message"
   >
     Try again
@@ -208,16 +208,17 @@ const ChatMessage = React.memo(function ChatMessage({
           ) : (
             <div className="flex flex-col gap-2">
               {isError && (
-                <div className="flex items-center gap-2 mb-2 text-red-600">
+                <div className="flex items-center gap-1.5 mb-2 text-black">
                   <svg
-                    width="16"
-                    height="16"
+                    width="13"
+                    height="13"
                     viewBox="0 0 24 24"
                     fill="currentColor"
+                    aria-hidden="true"
                   >
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                   </svg>
-                  <span className="text-sm font-medium">
+                  <span className="text-xs font-medium">
                     Message failed to send
                   </span>
                 </div>
@@ -230,7 +231,7 @@ const ChatMessage = React.memo(function ChatMessage({
                 />
               ) : (
                 !showDots && (
-                  <p className="text-gray-500 italic">
+                  <p className="text-gray-400 italic text-sm">
                     {isError ? "Failed to send message" : "No content"}
                   </p>
                 )
